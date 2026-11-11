@@ -222,7 +222,7 @@ if (cfg?.apiKey && cfg?.projectId && cfg?.appId) {
     // calendar blocks at the same time without replacing the other's changes.
     let writeQueue=Promise.resolve();
     const comparable = item => JSON.stringify(item);
-    function sanitizedTask(t) {return {ownerUid:t.userId,title:String(t.title||'').slice(0,80),category:String(t.category||'Other'),duration:Number(t.duration)||60}}
+    function sanitizedTask(t) {return {ownerUid:t.userId,title:String(t.title||'').slice(0,80),category:String(t.category||'Other'),duration:Number(t.duration)||60,color:typeof t.color==='string'&&/^#[0-9a-fA-F]{6}$/.test(t.color)?t.color.toLowerCase():null}}
     function sanitizedEvent(e) {return {ownerUid:e.userId,taskId:e.taskId,start:Number(e.start),duration:Number(e.duration),tracked:Number(e.tracked)||0,timerStart:e.timerStart||null,notes:String(e.notes||'').slice(0,2000)}}
     function changeSet(state) {
       const operations=[];
