@@ -1,5 +1,5 @@
 /* Offline app shell. Cloud data still requires an internet connection. */
-const CACHE = 'daymark-cloud-v3-copy-paste';
+const CACHE = 'daymark-cloud-v4-task-colours';
 const SHELL = ['./','./index.html','./cloud.js','./firebase-config.js','./manifest.webmanifest','./icons/daymark-192.png','./icons/daymark-512.png'];
 self.addEventListener('install', event => {event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(SHELL)));self.skipWaiting()});
 self.addEventListener('activate', event => {event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))));self.clients.claim()});
