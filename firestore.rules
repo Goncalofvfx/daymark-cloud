@@ -1,0 +1,81 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {return request.auth != null;}
+    function member(team) {
+      return signedIn() && exists(/databases/$(database)/documents/teams/$(team)/members/$(request.auth.uid));
+    }
+    function owner(team) {
+      return signedIn() &&
+        get(/databases/$(database)/documents/teams/$(team)).data.createdBy == request.auth.uid;
+    }
+    function inviteForMe(team) {
+      return signedIn() && request.auth.token.email_verified == true &&
+        request.auth.token.email is string &&
+        exists(/databases/$(database)/documents/teams/$(team)/invites/$(request.auth.token.email)) &&
+        get(/databases/$(database)/documents/teams/$(team)/invites/$(request.auth.token.email)).data.email == request.auth.token.email;
+    }
+
+    // Individual private index of teams. This is not an authorization token:
+    // actual team data always checks /members/{uid}.
+    match /users/{userId}/teams/{id} {
+      allow read, write: if signedIn() && request.auth.uid == userId;
+    }
+
+    match /teams/{team} {
+      allow create: if signedIn() && request.resource.data.createdBy == request.auth.uid &&
+        request.resource.data.name is string && request.resource.data.name.size() <= 65;
+      allow read: if member(team);
+      allow update, delete: if owner(team) && request.resource.data.createdBy == resource.data.createdBy;
+
+      match /members/{memberId} {
+        allow read: if member(team) || (signedIn() && request.auth.uid == memberId);
+        allow create: if signedIn() && request.auth.uid == memberId &&
+          request.resource.data.uid == memberId &&
+          request.resource.data.email == request.auth.token.email &&
+          request.resource.data.name is string &&
+          (
+            (getAfter(/databases/$(database)/documents/teams/$(team)).data.createdBy == memberId && request.resource.data.role == 'owner')
+            || (inviteForMe(team) && request.resource.data.role == 'member')
+          );
+        allow update: if signedIn() && request.auth.uid == memberId &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name','calendarName','color']) &&
+          request.resource.data.name is string && request.resource.data.name.size() <= 40 &&
+          request.resource.data.calendarName is string && request.resource.data.calendarName.size() <= 60;
+        allow delete: if owner(team);
+      }
+
+      match /invites/{email} {
+        allow get: if owner(team) || (signedIn() && request.auth.token.email_verified == true && resource.data.email == request.auth.token.email);
+        allow list: if owner(team);
+        allow create, update: if owner(team) && request.resource.data.email == email &&
+          request.resource.data.createdBy == request.auth.uid;
+        allow delete: if owner(team);
+      }
+
+      match /tasks/{task} {
+        allow read: if member(team);
+        allow create: if member(team) && request.resource.data.ownerUid == request.auth.uid &&
+          request.resource.data.title is string && request.resource.data.title.size() <= 80 &&
+          request.resource.data.duration is number && request.resource.data.duration >= 5 && request.resource.data.duration <= 1440;
+        allow update: if member(team) && resource.data.ownerUid == request.auth.uid &&
+          request.resource.data.ownerUid == resource.data.ownerUid &&
+          request.resource.data.title is string && request.resource.data.duration >= 5 && request.resource.data.duration <= 1440;
+        allow delete: if member(team) && resource.data.ownerUid == request.auth.uid;
+      }
+
+      match /events/{event} {
+        allow read: if member(team);
+        allow create: if member(team) && request.resource.data.ownerUid == request.auth.uid &&
+          request.resource.data.taskId is string && request.resource.data.duration is number &&
+          request.resource.data.duration >= 5 && request.resource.data.duration <= 1440 &&
+          request.resource.data.start is number && request.resource.data.tracked is number;
+        allow update: if member(team) && resource.data.ownerUid == request.auth.uid &&
+          request.resource.data.ownerUid == resource.data.ownerUid &&
+          request.resource.data.duration >= 5 && request.resource.data.duration <= 1440 &&
+          request.resource.data.start is number && request.resource.data.tracked is number;
+        allow delete: if member(team) && resource.data.ownerUid == request.auth.uid;
+      }
+    }
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "name": "Daymark · Shared Time Planner",
+  "short_name": "Daymark",
+  "description": "Plan, track and compare time with your team.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f6f7fb",
+  "theme_color": "#605ee9",
+  "icons": [
+    {"src":"./icons/daymark-192.png","sizes":"192x192","type":"image/png","purpose":"any maskable"},
+    {"src":"./icons/daymark-512.png","sizes":"512x512","type":"image/png","purpose":"any maskable"}
+  ]
+}
